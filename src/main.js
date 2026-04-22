@@ -40,6 +40,9 @@ app.whenReady().then(() => {
   });
   fallback.engine = engine;
 
+  keyListener = new KeyListener();
+  fallback.keyListener = keyListener;
+
   session = new Session({
     queue,
     detector,
@@ -48,7 +51,6 @@ app.whenReady().then(() => {
     onStateChange: updateTray,
   });
 
-  keyListener = new KeyListener();
   keyListener.setHotkeys(settings);
   keyListener.on('hold:down', () => session.startIfWisprRunning());
   keyListener.on('hold:up', () => session.arm());

@@ -1,7 +1,7 @@
 // Replaces "inserted link" keyword in transcription with queued clipboard items in order.
 // Only this exact phrase triggers replacement -- everything else stays untouched.
 
-const TRIGGER = /(?:inserted|embedded|insert|embed)\s+(?:link|image)/gi;
+const TRIGGER = /(?:inserted|embedded|insert|embed)\s+(?:links?|images?)/gi;
 
 class ReferenceReplacer {
   process(text, refs) {
@@ -22,7 +22,13 @@ class ReferenceReplacer {
       return ref.text?.trim() || 'inserted link';
     });
 
-    return { text: result.replace(/ {2,}/g, ' ').trim(), changed: count > 0, count, images };
+    const cleaned = result
+      .replace(/\s+([.,;:!?])/g, '$1')  // drop space before punctuation left by removed image triggers
+      .replace(/\s{2,}/g, ' ')           // collapse double spaces
+      .replace(/^[\s.,;:!?]+/, '')        // strip leading junk if trigger was at start
+      .trim();
+
+    return { text: cleaned, changed: count > 0, count, images };
   }
 }
 

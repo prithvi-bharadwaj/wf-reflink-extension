@@ -35,6 +35,7 @@ class KeyListener extends EventEmitter {
     super();
     this.hotkeys = { hold: null, toggle: null };
     this.recording = false;
+    this.suspended = false; // ignore events while we're synthesizing Cmd+V etc.
     this._held = false;
 
     uIOhook.on('keydown', (e) => this._onDown(e));
@@ -65,6 +66,7 @@ class KeyListener extends EventEmitter {
   endRecording() { this.recording = false; }
 
   _onDown(e) {
+    if (this.suspended) return;
     if (this.recording) {
       // Ignore pure modifier taps in recording — wait for a real key.
       if (MODIFIER_KEYCODES.has(e.keycode)) return;
@@ -86,6 +88,7 @@ class KeyListener extends EventEmitter {
   }
 
   _onUp(e) {
+    if (this.suspended) return;
     if (this.recording) return;
     if (matches(this.hotkeys.hold, e) && this._held) {
       this._held = false;
