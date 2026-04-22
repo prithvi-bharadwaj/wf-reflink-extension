@@ -1,0 +1,17 @@
+{
+  "name": "reflink",
+  "version": "0.1.0",
+  "description": "Clipboard reference injector for Wispr Flow — auto-links copied items into dictated text",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "build": "npx @electron/packager . RefLink --platform=darwin --arch=arm64 --out=dist --overwrite --icon=icon.icns"
+  },
+  "dependencies": {
+    "electron": "^33.0.0"
+  },
+  "devDependencies": {
+    "@electron/packager": "^19.1.0"
+  }
+}
