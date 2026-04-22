@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Record Hotkey</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #1e1e1e;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #aaa;
+    }
+    .combo {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      min-height: 40px;
+    }
+    .hint {
+      margin-top: 16px;
+      font-size: 11px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="title">Press a key…</h1>
+  <div class="combo" id="combo">…</div>
+  <div class="hint">Esc to cancel</div>
+  <script>
+    const { ipcRenderer } = require('electron');
+    ipcRenderer.on('recorder:title', (_e, text) => {
+      document.getElementById('title').textContent = text;
+    });
+    ipcRenderer.on('recorder:preview', (_e, label) => {
+      document.getElementById('combo').textContent = label;
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') ipcRenderer.send('recorder:cancel');
+    });
+  </script>
+</body>
+</html>
