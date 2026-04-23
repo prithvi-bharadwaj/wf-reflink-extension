@@ -1,14 +1,14 @@
-const { clipboard } = require('electron');
 const { isRunning } = require('./wispr-process');
 
 const ARM_TIMEOUT_MS = 15_000; // max wait for Wispr's transcription after session ends
 
 class Session {
-  constructor({ queue, detector, replacer, fallback, onStateChange }) {
+  constructor({ queue, detector, replacer, paster, getSettings, onStateChange }) {
     this.queue = queue;
     this.detector = detector;
     this.replacer = replacer;
-    this.fallback = fallback;
+    this.paster = paster;
+    this.getSettings = getSettings || (() => ({}));
     this.onStateChange = onStateChange || (() => {});
     this.active = false;
     this.ignoreNext = false;
@@ -42,13 +42,13 @@ class Session {
 
     const detected = this.detector.check(content, this.queue);
     if (detected) {
-      const processed = this.replacer.process(detected.text, this.queue.getAll());
-      if (processed.changed) {
+      const refs = this.queue.getAll();
+      const { segments, count } = this.replacer.parse(detected.text, refs);
+      if (count > 0) {
         this.ignoreNext = true;
-        clipboard.writeText(processed.text);
-        if (processed.images.length > 0) {
-          setTimeout(() => this.fallback.pasteImages(processed.images), 300);
-        }
+        const { pasteMode, pasteDelayMs } = this.getSettings();
+        // fire-and-forget: paster handles engine/key suspension internally
+        this.paster.paste({ segments, mode: pasteMode, delayMs: pasteDelayMs });
       }
       this._end();
       return;

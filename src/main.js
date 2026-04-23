@@ -3,7 +3,7 @@ const { ClipboardEngine } = require('./clipboard-engine');
 const { ReferenceQueue } = require('./reference-queue');
 const { TranscriptionDetector } = require('./transcription-detector');
 const { ReferenceReplacer } = require('./reference-replacer');
-const { FallbackPaster } = require('./fallback-paster');
+const { Paster } = require('./paster');
 const { KeyListener } = require('./key-listener');
 const { Session } = require('./session');
 const { recordHotkey } = require('./recorder-window');
@@ -16,7 +16,7 @@ let engine = null;
 let queue = null;
 let detector = null;
 let replacer = null;
-let fallback = null;
+let paster = null;
 let keyListener = null;
 let session = null;
 let settings = settingsStore.DEFAULTS;
@@ -32,22 +32,23 @@ app.whenReady().then(() => {
   queue = new ReferenceQueue();
   detector = new TranscriptionDetector();
   replacer = new ReferenceReplacer();
-  fallback = new FallbackPaster();
+  paster = new Paster({ replacer });
 
   engine = new ClipboardEngine({
     intervalMs: 100,
     onClipboardChange: (content) => session.handleClipboardChange(content),
   });
-  fallback.engine = engine;
+  paster.engine = engine;
 
   keyListener = new KeyListener();
-  fallback.keyListener = keyListener;
+  paster.keyListener = keyListener;
 
   session = new Session({
     queue,
     detector,
     replacer,
-    fallback,
+    paster,
+    getSettings: () => settings,
     onStateChange: updateTray,
   });
 
@@ -117,12 +118,42 @@ function updateTray() {
     { label: `Hold:   ${holdLabel}`, click: () => changeHotkey('hold'), enabled: !!started },
     { label: `Toggle: ${toggleLabel}`, click: () => changeHotkey('toggle'), enabled: !!started },
     { type: 'separator' },
+    { label: 'Paste mode', submenu: buildPasteModeSubmenu() },
+    { label: `Paste delay: ${settings.pasteDelayMs}ms`, submenu: buildPasteDelaySubmenu() },
+    { type: 'separator' },
     { label: 'Clear queue', click: () => { queue.clear(); updateTray(); } },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() }
   );
 
   tray.setContextMenu(Menu.buildFromTemplate(items));
+}
+
+function buildPasteModeSubmenu() {
+  const modes = [
+    { value: 'segmented', label: 'Segmented (inline text + images)' },
+    { value: 'batch', label: 'Batch (text first, images at end)' },
+  ];
+  return modes.map((m) => ({
+    label: m.label,
+    type: 'radio',
+    checked: settings.pasteMode === m.value,
+    click: () => setSetting('pasteMode', m.value),
+  }));
+}
+
+function buildPasteDelaySubmenu() {
+  return settingsStore.PASTE_DELAY_OPTIONS.map((ms) => ({
+    label: `${ms}ms`,
+    type: 'radio',
+    checked: settings.pasteDelayMs === ms,
+    click: () => setSetting('pasteDelayMs', ms),
+  }));
+}
+
+function setSetting(key, value) {
+  settings = settingsStore.setField(settings, key, value);
+  updateTray();
 }
 
 function openAccessibilitySettings() {
