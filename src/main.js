@@ -8,6 +8,8 @@ const { KeyListener } = require('./key-listener');
 const { Session } = require('./session');
 const { recordHotkey } = require('./recorder-window');
 const { openOnboarding } = require('./onboarding-window');
+const counterWindow = require('./counter-window');
+const wispr = require('./wispr-process');
 const settingsStore = require('./settings');
 const { buildLabel } = require('./hotkey-label');
 const { makeIdleIcon, makeRecordingIcon } = require('./icons');
@@ -23,6 +25,8 @@ let session = null;
 let settings = settingsStore.DEFAULTS;
 let idleIcon = null;
 let recordingIcon = null;
+let wisprRunning = false;
+let wisprPollTimer = null;
 
 app.dock?.hide();
 app.setLoginItemSettings({ openAtLogin: true, openAsHidden: true });
@@ -61,6 +65,9 @@ app.whenReady().then(() => {
   createTray();
   engine.start();
   keyListener.start();
+
+  pollWispr();
+  wisprPollTimer = setInterval(pollWispr, 1500);
 
   if (!settings.onboardingShown) {
     runOnboarding(true);
@@ -103,12 +110,9 @@ function updateTray() {
   const active = session?.active;
 
   tray.setImage(active ? recordingIcon : idleIcon);
+  tray.setTitle('');
 
-  if (!active) {
-    tray.setTitle('');
-  } else {
-    tray.setTitle(` ${texts}T\n ${imgs}I`, { fontType: 'monospacedDigit' });
-  }
+  counterWindow.update({ texts, imgs, visible: !!active && wisprRunning });
 
   const started = keyListener?.started;
   const status = !started
@@ -199,9 +203,21 @@ function notify(title, body) {
   new Notification({ title, body, silent: true }).show();
 }
 
+async function pollWispr() {
+  try {
+    const now = await wispr.isRunning();
+    if (now !== wisprRunning) {
+      wisprRunning = now;
+      updateTray();
+    }
+  } catch (_) { /* ignore transient ps errors */ }
+}
+
 app.on('will-quit', () => {
   keyListener?.stop();
   engine?.stop();
+  counterWindow.destroy();
+  if (wisprPollTimer) clearInterval(wisprPollTimer);
 });
 
 app.on('window-all-closed', (e) => e.preventDefault());
