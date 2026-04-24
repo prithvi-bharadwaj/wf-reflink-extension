@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>RefLink — Welcome</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    color: #eee;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+  }
+  * { box-sizing: border-box; }
+
+  .wash {
+    position: fixed; inset: 0;
+    background: rgba(10, 10, 12, 0.75);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .panel { display: none; position: fixed; inset: 0; }
+  .panel.active { display: block; animation: fadeIn 0.28s ease-out; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Step 1: faux menu bar + halo + arrow */
+  .faux-menubar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 26px;
+    background: rgba(28, 28, 32, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    font-size: 12.5px;
+    color: #d8d8d8;
+    z-index: 2;
+  }
+  .faux-menubar .left { display: flex; gap: 16px; align-items: center; }
+  .faux-menubar .apple { font-size: 14px; line-height: 1; }
+  .faux-menubar .app-name { font-weight: 600; }
+  .faux-menubar .right {
+    margin-left: auto;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    font-size: 12px;
+    color: #c4c4c4;
+    position: relative;
+  }
+  .faux-tray {
+    position: absolute;
+    top: 13px;
+    left: 50%;
+    width: 16px; height: 16px;
+    transform: translate(-50%, -50%);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 3;
+  }
+  .mb-clock {
+    font-variant-numeric: tabular-nums;
+    color: #c4c4c4;
+    font-size: 12.5px;
+  }
+  .faux-tray-icon {
+    width: 12px; height: 12px; border-radius: 3px;
+    background: linear-gradient(135deg, #f0f0f0 0%, #b4b4b4 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px;
+    font-weight: 800;
+    color: #1a1a1a;
+    position: relative;
+    z-index: 2;
+  }
+  .tray-halo {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 56px; height: 56px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(140, 210, 255, 0.55) 0%, rgba(140, 210, 255, 0.08) 45%, transparent 75%);
+    border-radius: 50%;
+    animation: pulse 2.2s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1);    opacity: 0.85; }
+    50%      { transform: translate(-50%, -50%) scale(1.18); opacity: 1; }
+  }
+  .arrow-svg {
+    position: fixed;
+    pointer-events: none;
+    left: 0; top: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 3;
+  }
+
+  .card {
+    position: fixed;
+    background: rgba(28, 28, 32, 0.94);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 16px;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
+    color: #f4f4f6;
+  }
+  .card-bottom {
+    left: 50%;
+    bottom: 88px;
+    transform: translateX(-50%);
+    width: 480px;
+    padding: 26px 30px 22px;
+  }
+  .card-hero {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 580px;
+    overflow: hidden;
+  }
+  .card-hero .hero-body { padding: 28px 34px 24px; }
+  .card-hero .hero-footer {
+    padding: 16px 34px 22px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    background: rgba(255,255,255,0.015);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+
+  .step-label {
+    font-size: 10.5px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: #7a7a7e;
+    font-weight: 600;
+  }
+  .card h1 {
+    margin: 10px 0 0;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.4px;
+    color: #f4f4f6;
+    line-height: 1.2;
+  }
+  .card p {
+    margin-top: 10px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: #9a9a9e;
+    font-weight: 400;
+  }
+  .card p em { font-style: normal; color: #8fe6b5; font-weight: 500; }
+
+  .card-footer {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .dots { display: flex; gap: 6px; }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.16);
+    transition: background 0.2s;
+  }
+  .dot.active { background: rgba(255,255,255,0.75); }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #f0f0f2;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.18); }
+  .btn-primary {
+    padding: 9px 18px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #f4f4f6 0%, #e0e0e4 100%);
+    color: #101012;
+    border: none;
+    font-weight: 600;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(255,255,255,0.06);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .btn-primary:hover { filter: brightness(1.05); }
+  .btn-primary[disabled] { cursor: not-allowed; opacity: 0.4; }
+  .btn-ghost {
+    background: transparent;
+    border: none;
+    color: #8a8a8e;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .btn-ghost:hover { color: #c8c8cc; background: rgba(255,255,255,0.04); }
+  .btn-row { display: flex; gap: 8px; align-items: center; }
+
+  /* Step 2: demo frames */
+  .demo {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-top: 18px;
+    margin-bottom: 4px;
+  }
+  .frame {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+    font-size: 13.5px;
+    color: #d8d8da;
+  }
+  .frame-badge {
+    min-width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    color: #aaa;
+    font-size: 11px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .trigger {
+    display: inline-block;
+    padding: 1px 7px;
+    background: rgba(130, 230, 180, 0.16);
+    color: #8fe6b5;
+    border-radius: 5px;
+    font-weight: 500;
+  }
+  .link-pill {
+    display: inline-block;
+    padding: 1px 7px;
+    background: rgba(130, 230, 180, 0.16);
+    color: #8fe6b5;
+    border-radius: 5px;
+    font-weight: 500;
+    font-family: "SF Mono", ui-monospace, monospace;
+    font-size: 12.5px;
+  }
+  .wave {
+    display: inline-flex; gap: 2px; align-items: center; margin-right: 4px;
+  }
+  .wave span {
+    width: 2px; background: #8fe6b5; border-radius: 1px; display: block;
+  }
+  .wave span:nth-child(1) { height: 6px; }
+  .wave span:nth-child(2) { height: 12px; }
+  .wave span:nth-child(3) { height: 18px; }
+  .wave span:nth-child(4) { height: 10px; }
+  .wave span:nth-child(5) { height: 14px; }
+  .wave span:nth-child(6) { height: 7px; }
+  .keycap {
+    display: inline-flex; align-items: center;
+    padding: 2px 7px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-bottom: 2px solid rgba(0,0,0,0.35);
+    border-radius: 5px;
+    font-family: "SF Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    color: #ddd;
+    margin: 0 1px;
+  }
+
+  /* Step 3: accessibility */
+  .status-row {
+    margin-top: 18px;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 9px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px;
+  }
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #ff9f4a;
+    box-shadow: 0 0 8px rgba(255, 159, 74, 0.5);
+  }
+  .status-dot.granted {
+    background: #4cd964;
+    box-shadow: 0 0 8px rgba(76, 217, 100, 0.6);
+  }
+  .status-text { color: #d8d8da; font-weight: 500; }
+  .status-text.granted { color: #8fe6b5; }
+
+  .action-stack {
+    margin-top: 14px;
+    display: flex; gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* Step 4: hotkeys */
+  .hotkey-rows { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+  .hotkey-row {
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .hotkey-info { flex: 1; min-width: 0; }
+  .hotkey-label-sm {
+    font-size: 12px;
+    color: #8a8a8e;
+    font-weight: 500;
+  }
+  .hotkey-value {
+    margin-top: 3px;
+    font-size: 14px;
+    color: #f0f0f2;
+    font-weight: 600;
+    letter-spacing: -0.1px;
+  }
+  .hotkey-value.unbound { color: #888; font-weight: 500; }
+
+  /* Persistent skip */
+  .skip-tour {
+    position: fixed;
+    top: 48px;
+    right: 40px;
+    font-size: 12px;
+    color: #8a8a8e;
+    padding: 7px 13px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    cursor: pointer;
+    transition: color 0.12s, background 0.12s;
+  }
+  .skip-tour:hover { color: #ddd; background: rgba(255,255,255,0.08); }
+  .skip-tour kbd {
+    font-family: "SF Mono", ui-monospace, monospace;
+    font-size: 10px;
+    padding: 1px 5px;
+    margin-left: 4px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 3px;
+    color: #aaa;
+  }
+</style>
+</head>
+<body>
+  <div class="wash"></div>
+
+  <!-- Step 1: Faux menu bar + halo + dynamic arrow -->
+  <div class="panel active" data-step="1">
+    <div class="faux-menubar">
+      <div class="left">
+        <span class="apple"></span>
+        <span class="app-name">Finder</span>
+        <span>File</span><span>Edit</span><span>View</span><span>Go</span><span>Window</span><span>Help</span>
+      </div>
+      <div class="right" id="menubar-right">
+        <span class="mb-clock">Thu 3:14 PM</span>
+      </div>
+      <div class="faux-tray" id="faux-tray">
+        <div class="tray-halo"></div>
+        <div class="faux-tray-icon">R</div>
+      </div>
+    </div>
+
+    <svg class="arrow-svg" id="step1-arrow"></svg>
+
+    <div class="card card-bottom">
+      <div class="step-label">Step 1 of 4</div>
+      <h1>RefLink lives up here.</h1>
+      <p>No window. No Dock. Just a menu-bar icon that listens while you dictate with Wispr Flow.</p>
+      <div class="card-footer">
+        <div class="dots">
+          <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+        <button class="btn-primary" data-action="next">Got it →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Hero Demo -->
+  <div class="panel" data-step="2">
+    <div class="card card-hero">
+      <div class="hero-body">
+        <div class="step-label">Step 2 of 4 · The trick</div>
+        <h1>Say it. Copy it. It lands.</h1>
+        <div class="demo">
+          <div class="frame">
+            <div class="frame-badge">1</div>
+            <div>
+              <span class="wave"><span></span><span></span><span></span><span></span><span></span><span></span></span>
+              You say: "Check out <span class="trigger">inserted link</span> — so cool."
+            </div>
+          </div>
+          <div class="frame">
+            <div class="frame-badge">2</div>
+            <div>You press <span class="keycap">⌘</span><span class="keycap">C</span> on <span class="link-pill">github.com/x/y</span></div>
+          </div>
+          <div class="frame">
+            <div class="frame-badge">3</div>
+            <div>Wispr pastes: "Check out <span class="link-pill">github.com/x/y</span> — so cool."</div>
+          </div>
+        </div>
+        <p>Say <em>"inserted link"</em> or <em>"embedded image"</em> and press ⌘C while dictating. RefLink swaps each trigger with the next thing you copied, in order.</p>
+      </div>
+      <div class="hero-footer">
+        <div class="dots">
+          <div class="dot"></div><div class="dot active"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-ghost" data-action="back">Back</button>
+          <button class="btn-primary" data-action="next">Continue →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Accessibility -->
+  <div class="panel" data-step="3">
+    <div class="card card-hero">
+      <div class="hero-body">
+        <div class="step-label">Step 3 of 4 · One-time setup</div>
+        <h1>Let RefLink hear your hotkey.</h1>
+        <p>macOS needs Accessibility permission so RefLink can detect when you trigger Wispr Flow. This is the only permission we ask for.</p>
+        <div class="status-row">
+          <div class="status-dot" id="ax-dot"></div>
+          <div class="status-text" id="ax-text">Checking…</div>
+        </div>
+        <div class="action-stack">
+          <button class="btn" data-action="open-accessibility">Open System Settings →</button>
+          <button class="btn" data-action="check-accessibility">I granted it — check again</button>
+        </div>
+      </div>
+      <div class="hero-footer">
+        <div class="dots">
+          <div class="dot"></div><div class="dot"></div><div class="dot active"></div><div class="dot"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-ghost" data-action="back">Back</button>
+          <button class="btn-primary" data-action="next" id="ax-next" disabled style="opacity:0.4;cursor:not-allowed;">Continue →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4: Hotkeys -->
+  <div class="panel" data-step="4">
+    <div class="card card-hero">
+      <div class="hero-body">
+        <div class="step-label">Step 4 of 4 · Your keys</div>
+        <h1>Teach me your Wispr key.</h1>
+        <p>RefLink watches for a key to know when you're dictating. Record whatever you use for Wispr Flow — hold-to-talk, or a tap-to-toggle.</p>
+        <div class="hotkey-rows">
+          <div class="hotkey-row">
+            <div class="hotkey-info">
+              <div class="hotkey-label-sm">Hold mode · press + dictate + release</div>
+              <div class="hotkey-value" id="hold-value">Fn (tap to record)</div>
+            </div>
+            <button class="btn" data-action="record-hold">Record</button>
+          </div>
+          <div class="hotkey-row">
+            <div class="hotkey-info">
+              <div class="hotkey-label-sm">Toggle mode · tap to start, tap to stop</div>
+              <div class="hotkey-value" id="toggle-value">⌥ Space</div>
+            </div>
+            <button class="btn" data-action="record-toggle">Record</button>
+          </div>
+        </div>
+      </div>
+      <div class="hero-footer">
+        <div class="dots">
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot active"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-ghost" data-action="back">Back</button>
+          <button class="btn-primary" data-action="finish">Start using RefLink</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="skip-tour" data-action="skip">Skip tour<kbd>esc</kbd></div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+    let step = 1;
+    const totalSteps = 4;
+
+    function showStep(n) {
+      if (n < 1 || n > totalSteps) return;
+      document.querySelectorAll('.panel').forEach((p) => p.classList.remove('active'));
+      const next = document.querySelector(`.panel[data-step="${n}"]`);
+      if (next) next.classList.add('active');
+      step = n;
+      if (n === 3) ipcRenderer.send('onboarding:check-accessibility');
+    }
+
+    document.body.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      if (btn.hasAttribute('disabled')) return;
+      const action = btn.dataset.action;
+      switch (action) {
+        case 'next':   showStep(step + 1); break;
+        case 'back':   showStep(step - 1); break;
+        case 'skip':   ipcRenderer.send('onboarding:close'); break;
+        case 'finish': ipcRenderer.send('onboarding:close'); break;
+        case 'open-accessibility':  ipcRenderer.send('onboarding:open-accessibility'); break;
+        case 'check-accessibility': ipcRenderer.send('onboarding:check-accessibility'); break;
+        case 'record-hold':   ipcRenderer.send('onboarding:record-hotkey', { which: 'hold' }); break;
+        case 'record-toggle': ipcRenderer.send('onboarding:record-hotkey', { which: 'toggle' }); break;
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') ipcRenderer.send('onboarding:close');
+      else if (e.key === 'ArrowRight' && step < totalSteps) showStep(step + 1);
+      else if (e.key === 'ArrowLeft' && step > 1) showStep(step - 1);
+    });
+
+    ipcRenderer.on('onboarding:init', (_e, payload) => {
+      if (payload.holdLabel)   document.getElementById('hold-value').textContent   = payload.holdLabel;
+      if (payload.toggleLabel) document.getElementById('toggle-value').textContent = payload.toggleLabel;
+      positionTrayAndArrow(payload.trayBounds);
+    });
+
+    function positionTrayAndArrow(trayBounds) {
+      const faux = document.getElementById('faux-tray');
+      if (faux && trayBounds && trayBounds.width) {
+        const centerX = trayBounds.x + trayBounds.width / 2;
+        faux.style.left = centerX + 'px';
+      } else if (faux) {
+        // fallback: roughly where macOS puts status icons
+        faux.style.left = (window.innerWidth - 120) + 'px';
+      }
+      requestAnimationFrame(drawStep1Arrow);
+    }
+
+    function drawStep1Arrow() {
+      const svg  = document.getElementById('step1-arrow');
+      const card = document.querySelector('.panel[data-step="1"] .card-bottom');
+      const tray = document.getElementById('faux-tray');
+      if (!svg || !card || !tray) return;
+
+      const cardRect = card.getBoundingClientRect();
+      const trayRect = tray.getBoundingClientRect();
+
+      const startX = cardRect.left + cardRect.width / 2;
+      const startY = cardRect.top - 12;
+      const endX   = trayRect.left + trayRect.width / 2;
+      const endY   = trayRect.bottom + 14;
+
+      const vh = window.innerHeight;
+      const c1x = startX + (endX - startX) * 0.25;
+      const c1y = startY - vh * 0.18;
+      const c2x = startX + (endX - startX) * 0.75;
+      const c2y = endY + vh * 0.20;
+
+      const pathD = `M ${startX} ${startY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${endX} ${endY}`;
+      const tip = 9;
+      const head = `M ${endX - tip} ${endY + tip} L ${endX} ${endY} L ${endX + tip} ${endY + tip}`;
+
+      svg.innerHTML = `
+        <defs>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="arrowGrad" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stop-color="#8cd2ff" stop-opacity="0.12"/>
+            <stop offset="100%" stop-color="#8cd2ff" stop-opacity="0.92"/>
+          </linearGradient>
+        </defs>
+        <path d="${pathD}" stroke="url(#arrowGrad)" stroke-width="2.5"
+              stroke-dasharray="6 6" stroke-linecap="round" fill="none" filter="url(#glow)"/>
+        <path d="${head}" stroke="#8cd2ff" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#glow)"/>
+      `;
+    }
+
+    window.addEventListener('resize', drawStep1Arrow);
+
+    ipcRenderer.on('onboarding:accessibility-state', (_e, { granted }) => {
+      const dot  = document.getElementById('ax-dot');
+      const text = document.getElementById('ax-text');
+      const nextBtn = document.getElementById('ax-next');
+      if (granted) {
+        dot.classList.add('granted');
+        text.classList.add('granted');
+        text.textContent = 'Granted — you\u2019re good to go';
+        if (nextBtn) {
+          nextBtn.removeAttribute('disabled');
+          nextBtn.style.opacity = '';
+          nextBtn.style.cursor = '';
+        }
+      } else {
+        dot.classList.remove('granted');
+        text.classList.remove('granted');
+        text.textContent = 'Not granted yet — open System Settings and toggle RefLink on';
+      }
+    });
+
+    ipcRenderer.on('onboarding:hotkey-captured', (_e, { which, label }) => {
+      const el = document.getElementById(which + '-value');
+      if (el) {
+        el.textContent = label;
+        el.classList.remove('unbound');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -13,6 +13,7 @@ const DEFAULTS = Object.freeze({
   toggle: Object.freeze({ keycode: 57, alt: true, ctrl: false, meta: false, shift: false, label: '⌥ Space' }),
   pasteMode: 'segmented',
   pasteDelayMs: 150,
+  onboardingShown: false,
 });
 
 function filePath() {
@@ -30,6 +31,7 @@ function load() {
       toggle: Object.freeze({ ...DEFAULTS.toggle, ...(parsed.toggle || {}) }),
       pasteMode,
       pasteDelayMs,
+      onboardingShown: !!parsed.onboardingShown,
     });
   } catch {
     return DEFAULTS;

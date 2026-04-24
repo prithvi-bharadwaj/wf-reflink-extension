@@ -7,6 +7,7 @@ const { Paster } = require('./paster');
 const { KeyListener } = require('./key-listener');
 const { Session } = require('./session');
 const { recordHotkey } = require('./recorder-window');
+const { openOnboarding } = require('./onboarding-window');
 const settingsStore = require('./settings');
 const { buildLabel } = require('./hotkey-label');
 const { makeIdleIcon, makeRecordingIcon } = require('./icons');
@@ -59,11 +60,33 @@ app.whenReady().then(() => {
 
   createTray();
   engine.start();
-  const started = keyListener.start();
-  if (!started) {
+  keyListener.start();
+
+  if (!settings.onboardingShown) {
+    runOnboarding(true);
+  } else if (!keyListener.started) {
     notify('RefLink', 'Needs Accessibility permission. Open menu → Grant access.');
   }
 });
+
+function runOnboarding(markShown) {
+  openOnboarding({
+    keyListener,
+    tray,
+    getSettings: () => settings,
+    onHotkeySet: (which, hotkey) => {
+      settings = settingsStore.setHotkey(settings, which, hotkey);
+      keyListener.setHotkeys(settings);
+      updateTray();
+    },
+    onAccessibilityChange: () => updateTray(),
+  }).then(() => {
+    if (markShown && !settings.onboardingShown) {
+      settings = settingsStore.setField(settings, 'onboardingShown', true);
+    }
+    updateTray();
+  });
+}
 
 function createTray() {
   idleIcon = makeIdleIcon();
@@ -83,13 +106,8 @@ function updateTray() {
 
   if (!active) {
     tray.setTitle('');
-  } else if (refs.length === 0) {
-    tray.setTitle(' 0');
   } else {
-    const parts = [];
-    if (texts) parts.push(`${texts}T`);
-    if (imgs) parts.push(`${imgs}I`);
-    tray.setTitle(` ${parts.join(' ')}`);
+    tray.setTitle(` ${texts}T\n ${imgs}I`, { fontType: 'monospacedDigit' });
   }
 
   const started = keyListener?.started;
@@ -123,6 +141,7 @@ function updateTray() {
     { type: 'separator' },
     { label: 'Clear queue', click: () => { queue.clear(); updateTray(); } },
     { type: 'separator' },
+    { label: 'Welcome tour…', click: () => runOnboarding(false) },
     { label: 'Quit', click: () => app.quit() }
   );
 

@@ -2,3 +2,5 @@ node_modules/
 dist/
 .cursor/
 .DS_Store
+.gstack/
+skill-runs.jsonl
