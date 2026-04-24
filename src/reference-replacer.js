@@ -5,11 +5,20 @@
 // The paster walks these segments to produce the final paste — either inline
 // (segmented mode) or flattened into one text paste + image tail (batch mode).
 
-const TRIGGER = /(?:inserted|embedded|insert|embed)\s+(?:links?|images?)/gi;
+const { buildReplacerRegex } = require('./triggers-regex');
 
 class ReferenceReplacer {
+  constructor(triggers = []) {
+    this.setTriggers(triggers);
+  }
+
+  setTriggers(triggers) {
+    this.triggers = triggers;
+    this.regex = buildReplacerRegex(triggers);
+  }
+
   parse(text, refs) {
-    if (!refs.length) {
+    if (!refs.length || !this.regex) {
       return { segments: [{ type: 'text', content: text }], count: 0 };
     }
 
@@ -17,7 +26,8 @@ class ReferenceReplacer {
     let lastIndex = 0;
     let refIndex = 0;
 
-    const re = new RegExp(TRIGGER.source, TRIGGER.flags);
+    // Fresh regex per parse so lastIndex state from prior calls can't leak.
+    const re = new RegExp(this.regex.source, this.regex.flags);
     let match;
     while ((match = re.exec(text)) !== null) {
       if (match.index > lastIndex) {

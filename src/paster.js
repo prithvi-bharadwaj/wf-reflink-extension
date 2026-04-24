@@ -20,8 +20,9 @@
 const { clipboard, nativeImage } = require('electron');
 const { uIOhook, UiohookKey } = require('uiohook-napi');
 
-const PRE_KEYTAP_SLEEP_MS = 40;   // let clipboard write land before Cmd+V
-const WISPR_PASTE_WAIT_MS = 300;  // wait for Wispr's own Cmd+V in batch mode
+const PRE_KEYTAP_SLEEP_MS = 80;   // let clipboard write land before Cmd+V
+const WISPR_PASTE_WAIT_MS = 500;  // wait for Wispr's own Cmd+V to fully commit (Notion is slow)
+const POST_UNDO_SLEEP_MS = 200;   // let Cmd+Z land before we start pasting segments
 
 class Paster {
   constructor({ replacer }) {
@@ -36,16 +37,28 @@ class Paster {
   }
 
   async _segmented(segments, delayMs) {
-    // Wispr has just written its transcription to the clipboard and is about
-    // to fire Cmd+V. Overwrite with empty so its paste is a no-op; we'll
-    // paste each segment ourselves.
-    clipboard.writeText('');
+    // Wispr has just written its transcription to the clipboard. Fully clear
+    // the pasteboard (not just text — writeText() would leave any image
+    // payload intact, and rich-text targets like Notion can pick that up
+    // instead of the empty string). If we win the race, Wispr's Cmd+V
+    // pastes nothing. If we lose, we'll clean up with Cmd+Z below.
+    clipboard.clear();
 
     this.engine?.stop();
     if (this.keyListener) this.keyListener.suspended = true;
     try {
-      // Give Wispr's in-flight Cmd+V a moment to fire against the empty clipboard.
+      // Wait for Wispr's insertion to complete (whichever mechanism it uses —
+      // Cmd+V, direct typing, or Accessibility API).
       await sleep(WISPR_PASTE_WAIT_MS);
+
+      // Undo Wispr's insertion. Three cases, all safe:
+      //   1. We won the overwrite race → Wispr pasted "" → Cmd+Z undoes the
+      //      empty paste (no visible change but removes it from the undo stack).
+      //   2. We lost → Wispr pasted its full text → Cmd+Z removes the duplicate.
+      //   3. Wispr bypassed the clipboard and typed directly → Cmd+Z undoes the
+      //      typing in any app that treats insertion as a single undoable action.
+      try { uIOhook.keyTap(UiohookKey.Z, [UiohookKey.Meta]); } catch { /* ignore */ }
+      await sleep(POST_UNDO_SLEEP_MS);
 
       for (const seg of segments) {
         const wrote = this._writeSegment(seg);
@@ -63,6 +76,9 @@ class Paster {
   async _batch(segments, delayMs) {
     const { text, images } = this.replacer.flattenForBatch(segments);
 
+    // Clear first so any stale image payload can't take precedence over our
+    // reconstituted text when Wispr's Cmd+V lands in a rich-text target.
+    clipboard.clear();
     clipboard.writeText(text);
 
     if (images.length === 0) return;

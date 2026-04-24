@@ -8,6 +8,7 @@ const { KeyListener } = require('./key-listener');
 const { Session } = require('./session');
 const { recordHotkey } = require('./recorder-window');
 const { openOnboarding } = require('./onboarding-window');
+const { openTriggerManager } = require('./trigger-window');
 const counterWindow = require('./counter-window');
 const wispr = require('./wispr-process');
 const settingsStore = require('./settings');
@@ -35,8 +36,8 @@ app.whenReady().then(() => {
   settings = settingsStore.load();
 
   queue = new ReferenceQueue();
-  detector = new TranscriptionDetector();
-  replacer = new ReferenceReplacer();
+  detector = new TranscriptionDetector(settings.triggers);
+  replacer = new ReferenceReplacer(settings.triggers);
   paster = new Paster({ replacer });
 
   engine = new ClipboardEngine({
@@ -115,11 +116,14 @@ function updateTray() {
   counterWindow.update({ texts, imgs, visible: !!active && wisprRunning });
 
   const started = keyListener?.started;
+  const armed = session?.armed;
   const status = !started
     ? 'Needs Accessibility permission'
-    : active
-      ? `Recording  |  ${texts} text  ${imgs} img`
-      : 'Waiting for Wispr Flow';
+    : !active
+      ? 'Waiting for Wispr Flow'
+      : armed
+        ? `Armed — waiting for transcription  |  ${texts} text  ${imgs} img`
+        : `Collecting  |  ${texts} text  ${imgs} img`;
   const holdLabel = buildLabel(settings.hold);
   const toggleLabel = buildLabel(settings.toggle);
 
@@ -142,6 +146,8 @@ function updateTray() {
     { type: 'separator' },
     { label: 'Paste mode', submenu: buildPasteModeSubmenu() },
     { label: `Paste delay: ${settings.pasteDelayMs}ms`, submenu: buildPasteDelaySubmenu() },
+    { label: `Trigger phrases (${settings.triggers.length})…`, click: openTriggerEditor },
+    { label: 'Reset triggers to defaults', click: resetTriggers },
     { type: 'separator' },
     { label: 'Clear queue', click: () => { queue.clear(); updateTray(); } },
     { type: 'separator' },
@@ -177,6 +183,28 @@ function buildPasteDelaySubmenu() {
 function setSetting(key, value) {
   settings = settingsStore.setField(settings, key, value);
   updateTray();
+}
+
+function openTriggerEditor() {
+  openTriggerManager({
+    initialTriggers: [...settings.triggers],
+    onUpdate: (triggers) => {
+      const normalized = Object.freeze(settingsStore.normalizeTriggers(triggers));
+      settings = settingsStore.setField(settings, 'triggers', normalized);
+      detector.setTriggers(normalized);
+      replacer.setTriggers(normalized);
+      updateTray();
+    },
+  });
+}
+
+function resetTriggers() {
+  const normalized = settingsStore.DEFAULT_TRIGGERS;
+  settings = settingsStore.setField(settings, 'triggers', normalized);
+  detector.setTriggers(normalized);
+  replacer.setTriggers(normalized);
+  updateTray();
+  notify('RefLink', 'Triggers reset to defaults.');
 }
 
 function openAccessibilitySettings() {
