@@ -8,11 +8,20 @@ const path = require('path');
 const PASTE_MODES = Object.freeze(['segmented', 'batch']);
 const PASTE_DELAY_OPTIONS = Object.freeze([50, 100, 150, 200, 300, 500]);
 
+// Matches the old hardcoded regex `/(?:inserted|embedded|insert|embed)\s+(?:links?|images?)/i`.
+const DEFAULT_TRIGGERS = Object.freeze([
+  'insert link', 'insert links', 'insert image', 'insert images',
+  'embed link', 'embed links', 'embed image', 'embed images',
+  'inserted link', 'inserted links', 'inserted image', 'inserted images',
+  'embedded link', 'embedded links', 'embedded image', 'embedded images',
+]);
+
 const DEFAULTS = Object.freeze({
   hold: Object.freeze({ keycode: null, alt: false, ctrl: false, meta: false, shift: false, label: 'Fn (tap to record)' }),
   toggle: Object.freeze({ keycode: 57, alt: true, ctrl: false, meta: false, shift: false, label: '⌥ Space' }),
   pasteMode: 'segmented',
   pasteDelayMs: 150,
+  triggers: DEFAULT_TRIGGERS,
 });
 
 function filePath() {
@@ -25,11 +34,15 @@ function load() {
     const parsed = JSON.parse(raw);
     const pasteMode = PASTE_MODES.includes(parsed.pasteMode) ? parsed.pasteMode : DEFAULTS.pasteMode;
     const pasteDelayMs = PASTE_DELAY_OPTIONS.includes(parsed.pasteDelayMs) ? parsed.pasteDelayMs : DEFAULTS.pasteDelayMs;
+    const triggers = Array.isArray(parsed.triggers)
+      ? Object.freeze(normalizeTriggers(parsed.triggers))
+      : DEFAULTS.triggers;
     return Object.freeze({
       hold: Object.freeze({ ...DEFAULTS.hold, ...(parsed.hold || {}) }),
       toggle: Object.freeze({ ...DEFAULTS.toggle, ...(parsed.toggle || {}) }),
       pasteMode,
       pasteDelayMs,
+      triggers,
     });
   } catch {
     return DEFAULTS;
@@ -60,4 +73,24 @@ function hotkeyLabel(h) {
   return h.label || '(recorded)';
 }
 
-module.exports = { load, save, setHotkey, setField, hotkeyLabel, DEFAULTS, PASTE_MODES, PASTE_DELAY_OPTIONS };
+// Trim, lowercase, drop empties and dupes. Triggers match case-insensitive
+// downstream; storing them canonical keeps the UI deduping obvious.
+function normalizeTriggers(list) {
+  const seen = new Set();
+  const out = [];
+  for (const raw of list) {
+    if (typeof raw !== 'string') continue;
+    const phrase = raw.trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!phrase) continue;
+    if (seen.has(phrase)) continue;
+    seen.add(phrase);
+    out.push(phrase);
+  }
+  return out;
+}
+
+module.exports = {
+  load, save, setHotkey, setField, hotkeyLabel,
+  normalizeTriggers,
+  DEFAULTS, PASTE_MODES, PASTE_DELAY_OPTIONS, DEFAULT_TRIGGERS,
+};

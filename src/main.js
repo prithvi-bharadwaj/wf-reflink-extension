@@ -7,6 +7,7 @@ const { Paster } = require('./paster');
 const { KeyListener } = require('./key-listener');
 const { Session } = require('./session');
 const { recordHotkey } = require('./recorder-window');
+const { openTriggerManager } = require('./trigger-window');
 const settingsStore = require('./settings');
 const { buildLabel } = require('./hotkey-label');
 const { makeIdleIcon, makeRecordingIcon } = require('./icons');
@@ -30,8 +31,8 @@ app.whenReady().then(() => {
   settings = settingsStore.load();
 
   queue = new ReferenceQueue();
-  detector = new TranscriptionDetector();
-  replacer = new ReferenceReplacer();
+  detector = new TranscriptionDetector(settings.triggers);
+  replacer = new ReferenceReplacer(settings.triggers);
   paster = new Paster({ replacer });
 
   engine = new ClipboardEngine({
@@ -120,6 +121,8 @@ function updateTray() {
     { type: 'separator' },
     { label: 'Paste mode', submenu: buildPasteModeSubmenu() },
     { label: `Paste delay: ${settings.pasteDelayMs}ms`, submenu: buildPasteDelaySubmenu() },
+    { label: `Trigger phrases (${settings.triggers.length})…`, click: openTriggerEditor },
+    { label: 'Reset triggers to defaults', click: resetTriggers },
     { type: 'separator' },
     { label: 'Clear queue', click: () => { queue.clear(); updateTray(); } },
     { type: 'separator' },
@@ -154,6 +157,28 @@ function buildPasteDelaySubmenu() {
 function setSetting(key, value) {
   settings = settingsStore.setField(settings, key, value);
   updateTray();
+}
+
+function openTriggerEditor() {
+  openTriggerManager({
+    initialTriggers: [...settings.triggers],
+    onUpdate: (triggers) => {
+      const normalized = Object.freeze(settingsStore.normalizeTriggers(triggers));
+      settings = settingsStore.setField(settings, 'triggers', normalized);
+      detector.setTriggers(normalized);
+      replacer.setTriggers(normalized);
+      updateTray();
+    },
+  });
+}
+
+function resetTriggers() {
+  const normalized = settingsStore.DEFAULT_TRIGGERS;
+  settings = settingsStore.setField(settings, 'triggers', normalized);
+  detector.setTriggers(normalized);
+  replacer.setTriggers(normalized);
+  updateTray();
+  notify('RefLink', 'Triggers reset to defaults.');
 }
 
 function openAccessibilitySettings() {

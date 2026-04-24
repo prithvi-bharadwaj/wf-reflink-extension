@@ -1,14 +1,25 @@
-// Detects Wispr Flow transcription vs a normal user copy.
-// Key signal: the text contains our trigger phrase ("inserted link", "embedded link", etc.)
+// Detects whether a clipboard change is a Wispr Flow transcription that
+// should be rewritten with queued refs, or just a regular user copy.
 
-const TRIGGER = /(?:inserted|embedded|insert|embed)\s+(?:links?|images?)/i;
+const { buildDetectorRegex } = require('./triggers-regex');
+
 const URL_ONLY_PATTERN = /^https?:\/\/\S+$/;
 const PATH_PATTERN = /^(\/|~|[A-Z]:\\)/;
 
 class TranscriptionDetector {
+  constructor(triggers = []) {
+    this.setTriggers(triggers);
+  }
+
+  setTriggers(triggers) {
+    this.triggers = triggers;
+    this.regex = buildDetectorRegex(triggers);
+  }
+
   check(content, queue) {
     if (content.type !== 'text') return null;
     if (queue.size() === 0) return null;
+    if (!this.regex) return null;
 
     const { text } = content;
     if (!text) return null;
@@ -16,9 +27,7 @@ class TranscriptionDetector {
     if (URL_ONLY_PATTERN.test(trimmed)) return null;
     if (PATH_PATTERN.test(trimmed)) return null;
 
-    // Must contain at least one trigger phrase — this is the real guard
-    // against false positives, so the previous length floor was redundant.
-    if (!TRIGGER.test(text)) return null;
+    if (!this.regex.test(text)) return null;
 
     return { text };
   }
