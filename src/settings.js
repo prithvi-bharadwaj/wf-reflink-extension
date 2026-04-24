@@ -20,7 +20,7 @@ const DEFAULTS = Object.freeze({
   hold: Object.freeze({ keycode: null, alt: false, ctrl: false, meta: false, shift: false, label: 'Fn (tap to record)' }),
   toggle: Object.freeze({ keycode: 57, alt: true, ctrl: false, meta: false, shift: false, label: '⌥ Space' }),
   pasteMode: 'segmented',
-  pasteDelayMs: 150,
+  pasteDelayMs: 250,
   triggers: DEFAULT_TRIGGERS,
 });
 

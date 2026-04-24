@@ -20,9 +20,9 @@
 const { clipboard, nativeImage } = require('electron');
 const { uIOhook, UiohookKey } = require('uiohook-napi');
 
-const PRE_KEYTAP_SLEEP_MS = 40;   // let clipboard write land before Cmd+V
-const WISPR_PASTE_WAIT_MS = 300;  // wait for Wispr's own Cmd+V in batch mode
-const POST_UNDO_SLEEP_MS = 80;    // let Cmd+Z land before we start pasting segments
+const PRE_KEYTAP_SLEEP_MS = 80;   // let clipboard write land before Cmd+V
+const WISPR_PASTE_WAIT_MS = 500;  // wait for Wispr's own Cmd+V to fully commit (Notion is slow)
+const POST_UNDO_SLEEP_MS = 200;   // let Cmd+Z land before we start pasting segments
 
 class Paster {
   constructor({ replacer }) {
