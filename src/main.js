@@ -94,11 +94,14 @@ function updateTray() {
   }
 
   const started = keyListener?.started;
+  const armed = session?.armed;
   const status = !started
     ? 'Needs Accessibility permission'
-    : active
-      ? `Recording  |  ${texts} text  ${imgs} img`
-      : 'Waiting for Wispr Flow';
+    : !active
+      ? 'Waiting for Wispr Flow'
+      : armed
+        ? `Armed — waiting for transcription  |  ${texts} text  ${imgs} img`
+        : `Collecting  |  ${texts} text  ${imgs} img`;
   const holdLabel = buildLabel(settings.hold);
   const toggleLabel = buildLabel(settings.toggle);
 

@@ -37,10 +37,12 @@ class Paster {
   }
 
   async _segmented(segments, delayMs) {
-    // Wispr has just written its transcription to the clipboard. Overwrite
-    // with empty text — if we win the race, Wispr's Cmd+V pastes nothing.
-    // If we lose, we'll clean up with Cmd+Z below.
-    clipboard.writeText('');
+    // Wispr has just written its transcription to the clipboard. Fully clear
+    // the pasteboard (not just text — writeText() would leave any image
+    // payload intact, and rich-text targets like Notion can pick that up
+    // instead of the empty string). If we win the race, Wispr's Cmd+V
+    // pastes nothing. If we lose, we'll clean up with Cmd+Z below.
+    clipboard.clear();
 
     this.engine?.stop();
     if (this.keyListener) this.keyListener.suspended = true;
@@ -74,6 +76,9 @@ class Paster {
   async _batch(segments, delayMs) {
     const { text, images } = this.replacer.flattenForBatch(segments);
 
+    // Clear first so any stale image payload can't take precedence over our
+    // reconstituted text when Wispr's Cmd+V lands in a rich-text target.
+    clipboard.clear();
     clipboard.writeText(text);
 
     if (images.length === 0) return;

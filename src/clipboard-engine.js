@@ -23,20 +23,24 @@ class ClipboardEngine {
     const image = clipboard.readImage();
     const imageData = image && !image.isEmpty() ? image.toDataURL() : '';
 
-    // Text changed
-    if (text && text !== this.lastText) {
+    const textChanged = text && text !== this.lastText;
+    const imageChanged = imageData && imageData !== this.lastImage;
+
+    if (!textChanged && !imageChanged) return;
+
+    // Image changes take priority. Browsers (and many apps) write the image
+    // URL as text alongside the image bytes when you "Copy image"; without
+    // this we'd store the copy as a text ref and lose the picture.
+    if (imageChanged) {
       this.lastText = text;
       this.lastImage = imageData;
-      this.onClipboardChange({ type: 'text', text, imageData });
+      this.onClipboardChange({ type: 'image', text, imageData });
       return;
     }
 
-    // Image changed (no text change)
-    if (imageData && imageData !== this.lastImage) {
-      this.lastImage = imageData;
-      this.lastText = text;
-      this.onClipboardChange({ type: 'image', text, imageData });
-    }
+    this.lastText = text;
+    this.lastImage = imageData;
+    this.onClipboardChange({ type: 'text', text, imageData });
   }
 }
 

@@ -1,4 +1,6 @@
-const MAX_AGE_MS = 30_000; // only use refs copied in the last 30s
+// Holds the refs copied during the current COLLECTING phase.
+// Session boundaries (start/end) are the lifetime — there is no age cutoff,
+// so long dictations don't silently drop their earliest copies.
 
 class ReferenceQueue {
   constructor() {
@@ -10,12 +12,11 @@ class ReferenceQueue {
   }
 
   getAll() {
-    const cutoff = Date.now() - MAX_AGE_MS;
-    return this.items.filter((r) => r.timestamp >= cutoff);
+    return [...this.items];
   }
 
   size() {
-    return this.getAll().length;
+    return this.items.length;
   }
 
   clear() {
