@@ -56,6 +56,7 @@ app.whenReady().then(() => {
     paster,
     getSettings: () => settings,
     onStateChange: updateTray,
+    onSessionStart: () => engine.resync(),
   });
 
   keyListener.setHotkeys(settings);

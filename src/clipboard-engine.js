@@ -18,6 +18,14 @@ class ClipboardEngine {
     this.timer = null;
   }
 
+  // Reset the baseline to match the current system clipboard. Call this after
+  // anything that may have changed the clipboard behind our back (e.g. a
+  // session start that cleared it) so the next real user copy fires a change.
+  resync() {
+    this.lastText = clipboard.readText();
+    this.lastImage = clipboard.readImage()?.toDataURL() || '';
+  }
+
   _poll() {
     const text = clipboard.readText();
     const image = clipboard.readImage();
