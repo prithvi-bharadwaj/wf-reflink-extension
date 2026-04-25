@@ -6,7 +6,8 @@
   "scripts": {
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
-    "build": "npx @electron/packager . RefLink --platform=darwin --arch=arm64 --out=dist --overwrite --icon=icon.icns"
+    "build": "npx @electron/packager . RefLink --platform=darwin --arch=arm64 --out=dist --overwrite --icon=icon.icns",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "electron": "^33.0.0",
