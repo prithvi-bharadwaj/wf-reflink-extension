@@ -14,7 +14,6 @@
 //   COLLECTING → ARMED  hold:up / second toggle:press
 //   ARMED → IDLE        detector match (inject fires) OR 15 s timeout
 
-const { clipboard } = require('electron');
 const { isRunning } = require('./wispr-process');
 
 const ARM_TIMEOUT_MS = 15_000;
@@ -37,11 +36,12 @@ class Session {
   async startIfWisprRunning() {
     if (this.active) return;
     if (!(await isRunning())) return;
-    // Wipe anything left on the system clipboard (pre-session copies, or
-    // residue from a previous session's paster) so it can't get pushed as a
-    // stale ref on the very next poll. Then resync the engine's baseline so
-    // the cleared state is what we diff against.
-    clipboard.clear();
+    // Resync the engine's clipboard baseline so whatever's currently on the
+    // pasteboard becomes our reference point. This prevents pre-session
+    // content (or residue from a previous session's paster) from firing as a
+    // phantom "change" on the next poll and getting pushed as a stale ref.
+    // Note: we deliberately do NOT clipboard.clear() — pre-session copies
+    // are *ignored*, not *deleted* (see README).
     this.onSessionStart();
     this.queue.clear();
     this.active = true;
