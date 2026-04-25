@@ -19,13 +19,14 @@ const { isRunning } = require('./wispr-process');
 const ARM_TIMEOUT_MS = 15_000;
 
 class Session {
-  constructor({ queue, detector, replacer, paster, getSettings, onStateChange }) {
+  constructor({ queue, detector, replacer, paster, getSettings, onStateChange, onSessionStart }) {
     this.queue = queue;
     this.detector = detector;
     this.replacer = replacer;
     this.paster = paster;
     this.getSettings = getSettings || (() => ({}));
     this.onStateChange = onStateChange || (() => {});
+    this.onSessionStart = onSessionStart || (() => {});
     this.active = false;
     this.armed = false;
     this.ignoreNext = false;
@@ -35,6 +36,13 @@ class Session {
   async startIfWisprRunning() {
     if (this.active) return;
     if (!(await isRunning())) return;
+    // Resync the engine's clipboard baseline so whatever's currently on the
+    // pasteboard becomes our reference point. This prevents pre-session
+    // content (or residue from a previous session's paster) from firing as a
+    // phantom "change" on the next poll and getting pushed as a stale ref.
+    // Note: we deliberately do NOT clipboard.clear() — pre-session copies
+    // are *ignored*, not *deleted* (see README).
+    this.onSessionStart();
     this.queue.clear();
     this.active = true;
     this.armed = false;

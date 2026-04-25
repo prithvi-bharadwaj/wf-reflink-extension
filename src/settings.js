@@ -22,6 +22,7 @@ const DEFAULTS = Object.freeze({
   pasteMode: 'segmented',
   pasteDelayMs: 250,
   triggers: DEFAULT_TRIGGERS,
+  onboardingShown: false,
 });
 
 function filePath() {
@@ -43,6 +44,7 @@ function load() {
       pasteMode,
       pasteDelayMs,
       triggers,
+      onboardingShown: !!parsed.onboardingShown,
     });
   } catch {
     return DEFAULTS;

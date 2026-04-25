@@ -1,57 +1,105 @@
 # RefLink
 
-Clipboard reference injector for Wispr Flow. Copy links/images while dictating, and they auto-replace reference words ("this", "here") in your transcription.
+**Clipboard reference injector for [Wispr Flow](https://wisprflow.ai).** Copy links and images while you dictate — RefLink swaps them into your transcription wherever you say "inserted link" or "embedded image."
 
-## How it works
+Say this:
 
-1. RefLink passively listens for your Wispr Flow hotkey.
-2. When you trigger Wispr Flow (and Wispr Flow is running), RefLink starts capturing.
-3. Copy links/images as you dictate — each `Cmd+C` becomes a numbered reference.
-4. Speak naturally: "Hey, **inserted link** is a cool project. **inserted link** is another one."
-5. When Wispr Flow finishes dictating, RefLink intercepts the transcription on the clipboard.
-6. Each trigger phrase (`inserted link`, `embedded image`, etc.) gets replaced with the next queued reference.
-7. The paste lands with links already embedded.
+> "Check out **inserted link** — I love the header on **inserted link**. Here's a screenshot: **embedded image**."
 
-The queue only collects copies **during** a Wispr Flow session. Anything you copied before triggering dictation is ignored.
+Get this:
 
-## Hotkeys
+> "Check out https://github.com/x/y — I love the header on https://stripe.com. Here's a screenshot: 🖼️"
 
-Configurable from the menu-bar icon. Defaults:
+## Features
 
-- **Hold mode** — hold a key while dictating; session ends on release. *(unbound by default — record your Wispr Flow hold key, e.g. Fn)*
-- **Toggle mode** — tap once to start, tap again to stop. *(default: ⌥ Space)*
+- **Auto-capture** — detects Wispr Flow and starts a session on your hotkey, no extra clicks
+- **Links + images** — each `Cmd+C` during a session becomes a numbered reference
+- **Two paste modes**
+  - *Segmented* — references land inline, exactly where you said the trigger word
+  - *Batch* — text first, images appended at the end (fallback for stubborn apps)
+- **Configurable hotkeys** — hold mode (press-and-hold) or toggle mode (tap to start/stop)
+- **Menu-bar only** — no Dock icon, tray turns red while capturing
+- **Tunable paste delay** — adjust timing if an app drops keystrokes
 
-Click the tray icon → `Hold: …` or `Toggle: …` to record. Press Esc in the recorder to cancel.
+## Requirements
 
-## Run
+- macOS (Apple Silicon)
+- Node.js 18+
+- [Wispr Flow](https://wisprflow.ai) installed and running
+- Accessibility permission (macOS prompts on first run)
 
-```
+## Install & Run
+
+```bash
 npm install
 npm start
 ```
 
-On first run, macOS will prompt for **Accessibility** permission — RefLink needs it to detect your Wispr Flow hotkey. Grant it in `System Settings → Privacy & Security → Accessibility`, then click `Retry after granting` in the tray menu.
+Grant Accessibility access when macOS prompts: `System Settings → Privacy & Security → Accessibility`. Then click **Retry after granting** in the tray menu.
+
+## Build
+
+```bash
+npm run build
+# → dist/RefLink-darwin-arm64/RefLink.app
+```
+
+## How it works
+
+1. RefLink listens for your configured hotkey in the background.
+2. When you trigger it *and* Wispr Flow is running, a capture session starts — the tray icon turns red.
+3. Every `Cmd+C` during the session gets queued as a reference.
+4. Dictate naturally, using trigger phrases where you want each reference inserted.
+5. When Wispr Flow pastes its transcription, RefLink intercepts the clipboard, swaps trigger phrases for queued references, and repastes.
+
+Copies made *before* the session are ignored. One queue per session.
+
+## Hotkeys
+
+Click the tray icon to configure:
+
+- **Hold mode** — hold while dictating, release to end. Unbound by default — record whatever key you use for Wispr Flow hold-to-talk (e.g. `Fn`).
+- **Toggle mode** — tap to start, tap again to stop. Default: `⌥ Space`.
+
+Press `Esc` in the recorder dialog to cancel.
 
 ## Architecture
 
 ```
 KeyListener (uiohook-napi)
-       |
-       ├─ hold:down / toggle:press  →  Session.startIfWisprRunning()  →  Wispr running? → clear queue, active=true
-       |                                                                            else → ignore
-       |
-       └─ hold:up / toggle:press (2nd)  →  Session.arm()  →  wait up to 15s for Wispr's transcription
+   │
+   ├── hold-down / toggle-press (1st)
+   │     └─→ Session.startIfWisprRunning
+   │           ├─ Wispr running? → clear queue, set active
+   │           └─ else → ignore
+   │
+   └── hold-up / toggle-press (2nd)
+         └─→ Session.arm() — wait ≤15s for Wispr's transcription
 
-ClipboardEngine (polls every 100ms)
-       |
-       v
-  [clipboard change]
-       |
-       └─ Session.handleClipboardChange →
-              active=false → ignore
-              is transcription (TranscriptionDetector) →
-                ReferenceReplacer swaps trigger words with queued refs →
-                clipboard.writeText(modified) → Wispr Flow's Cmd+V pastes modified version →
-                end session
-              otherwise → push to queue
+ClipboardEngine (100ms poll)
+   │
+   └── on change → Session.handleClipboardChange
+         ├─ inactive → ignore
+         ├─ looks like transcription → ReferenceReplacer swaps triggers,
+         │    Paster writes modified clipboard and synthesizes Cmd+V
+         └─ else → push to reference queue
 ```
+
+### Source layout
+
+| File | Role |
+|------|------|
+| [src/main.js](src/main.js) | Electron entry, tray menu, settings persistence |
+| [src/session.js](src/session.js) | Session orchestration (start, arm, end) |
+| [src/clipboard-engine.js](src/clipboard-engine.js) | 100ms clipboard polling loop |
+| [src/key-listener.js](src/key-listener.js) | Global hotkey binding via uiohook |
+| [src/reference-queue.js](src/reference-queue.js) | FIFO queue of captured references |
+| [src/reference-replacer.js](src/reference-replacer.js) | Trigger-phrase → reference swap logic |
+| [src/paster.js](src/paster.js) | Segmented & batch paste engines |
+| [src/transcription-detector.js](src/transcription-detector.js) | Distinguishes Wispr output from user copies |
+| [src/wispr-process.js](src/wispr-process.js) | Detects whether Wispr Flow is running |
+| [src/settings.js](src/settings.js) | Persistent preferences |
+
+## Status
+
+Early, working, vibe-coded. Apple Silicon only. No auto-update, no signing, no installer — build locally and run.

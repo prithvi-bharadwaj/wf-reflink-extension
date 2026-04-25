@@ -7,7 +7,10 @@ const { Paster } = require('./paster');
 const { KeyListener } = require('./key-listener');
 const { Session } = require('./session');
 const { recordHotkey } = require('./recorder-window');
+const { openOnboarding } = require('./onboarding-window');
 const { openTriggerManager } = require('./trigger-window');
+const counterWindow = require('./counter-window');
+const wispr = require('./wispr-process');
 const settingsStore = require('./settings');
 const { buildLabel } = require('./hotkey-label');
 const { makeIdleIcon, makeRecordingIcon } = require('./icons');
@@ -23,6 +26,8 @@ let session = null;
 let settings = settingsStore.DEFAULTS;
 let idleIcon = null;
 let recordingIcon = null;
+let wisprRunning = false;
+let wisprPollTimer = null;
 
 app.dock?.hide();
 app.setLoginItemSettings({ openAtLogin: true, openAsHidden: true });
@@ -51,6 +56,7 @@ app.whenReady().then(() => {
     paster,
     getSettings: () => settings,
     onStateChange: updateTray,
+    onSessionStart: () => engine.resync(),
   });
 
   keyListener.setHotkeys(settings);
@@ -60,11 +66,36 @@ app.whenReady().then(() => {
 
   createTray();
   engine.start();
-  const started = keyListener.start();
-  if (!started) {
+  keyListener.start();
+
+  pollWispr();
+  wisprPollTimer = setInterval(pollWispr, 1500);
+
+  if (!settings.onboardingShown) {
+    runOnboarding(true);
+  } else if (!keyListener.started) {
     notify('RefLink', 'Needs Accessibility permission. Open menu → Grant access.');
   }
 });
+
+function runOnboarding(markShown) {
+  openOnboarding({
+    keyListener,
+    tray,
+    getSettings: () => settings,
+    onHotkeySet: (which, hotkey) => {
+      settings = settingsStore.setHotkey(settings, which, hotkey);
+      keyListener.setHotkeys(settings);
+      updateTray();
+    },
+    onAccessibilityChange: () => updateTray(),
+  }).then(() => {
+    if (markShown && !settings.onboardingShown) {
+      settings = settingsStore.setField(settings, 'onboardingShown', true);
+    }
+    updateTray();
+  });
+}
 
 function createTray() {
   idleIcon = makeIdleIcon();
@@ -81,17 +112,9 @@ function updateTray() {
   const active = session?.active;
 
   tray.setImage(active ? recordingIcon : idleIcon);
+  tray.setTitle('');
 
-  if (!active) {
-    tray.setTitle('');
-  } else if (refs.length === 0) {
-    tray.setTitle(' 0');
-  } else {
-    const parts = [];
-    if (texts) parts.push(`${texts}T`);
-    if (imgs) parts.push(`${imgs}I`);
-    tray.setTitle(` ${parts.join(' ')}`);
-  }
+  counterWindow.update({ texts, imgs, visible: !!active && wisprRunning });
 
   const started = keyListener?.started;
   const armed = session?.armed;
@@ -129,6 +152,7 @@ function updateTray() {
     { type: 'separator' },
     { label: 'Clear queue', click: () => { queue.clear(); updateTray(); } },
     { type: 'separator' },
+    { label: 'Welcome tour…', click: () => runOnboarding(false) },
     { label: 'Quit', click: () => app.quit() }
   );
 
@@ -208,9 +232,21 @@ function notify(title, body) {
   new Notification({ title, body, silent: true }).show();
 }
 
+async function pollWispr() {
+  try {
+    const now = await wispr.isRunning();
+    if (now !== wisprRunning) {
+      wisprRunning = now;
+      updateTray();
+    }
+  } catch (_) { /* ignore transient ps errors */ }
+}
+
 app.on('will-quit', () => {
   keyListener?.stop();
   engine?.stop();
+  counterWindow.destroy();
+  if (wisprPollTimer) clearInterval(wisprPollTimer);
 });
 
 app.on('window-all-closed', (e) => e.preventDefault());
