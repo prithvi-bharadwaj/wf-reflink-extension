@@ -13,7 +13,7 @@ const counterWindow = require('./counter-window');
 const wispr = require('./wispr-process');
 const settingsStore = require('./settings');
 const { buildLabel } = require('./hotkey-label');
-const { makeIdleIcon, makeRecordingIcon } = require('./icons');
+const { makeIdleIcon, makeActiveIcon, makeWaitingFrames } = require('./icons');
 
 let tray = null;
 let engine = null;
@@ -25,7 +25,10 @@ let keyListener = null;
 let session = null;
 let settings = settingsStore.DEFAULTS;
 let idleIcon = null;
-let recordingIcon = null;
+let activeIcon = null;
+let waitingFrames = [];
+let waitingTimer = null;
+let waitingFrameIdx = 0;
 let wisprRunning = false;
 let wisprPollTimer = null;
 
@@ -99,9 +102,25 @@ function runOnboarding(markShown) {
 
 function createTray() {
   idleIcon = makeIdleIcon();
-  recordingIcon = makeRecordingIcon();
+  activeIcon = makeActiveIcon();
+  waitingFrames = makeWaitingFrames();
   tray = new Tray(idleIcon);
   updateTray();
+}
+
+function startWaitingAnim() {
+  if (waitingTimer) return;
+  waitingFrameIdx = 0;
+  waitingTimer = setInterval(() => {
+    waitingFrameIdx = (waitingFrameIdx + 1) % waitingFrames.length;
+    tray?.setImage(waitingFrames[waitingFrameIdx]);
+  }, 180);
+}
+
+function stopWaitingAnim() {
+  if (!waitingTimer) return;
+  clearInterval(waitingTimer);
+  waitingTimer = null;
 }
 
 function updateTray() {
@@ -111,7 +130,15 @@ function updateTray() {
   const imgs = refs.filter((r) => r.type === 'image').length;
   const active = session?.active;
 
-  tray.setImage(active ? recordingIcon : idleIcon);
+  if (!active) {
+    stopWaitingAnim();
+    tray.setImage(idleIcon);
+  } else if (refs.length === 0) {
+    startWaitingAnim();
+  } else {
+    stopWaitingAnim();
+    tray.setImage(activeIcon);
+  }
   tray.setTitle('');
 
   counterWindow.update({ texts, imgs, visible: !!active && wisprRunning });
@@ -243,6 +270,7 @@ async function pollWispr() {
 }
 
 app.on('will-quit', () => {
+  stopWaitingAnim();
   keyListener?.stop();
   engine?.stop();
   counterWindow.destroy();

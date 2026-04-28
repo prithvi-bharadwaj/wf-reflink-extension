@@ -6,7 +6,9 @@
   "scripts": {
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
-    "build": "npx @electron/packager . RefLink --platform=darwin --arch=arm64 --out=dist --overwrite --icon=icon.icns",
+    "build:icon": "node scripts/make-icon.js",
+    "build": "node scripts/make-icon.js && npx @electron/packager . RefLink --platform=darwin --arch=arm64 --out=dist --overwrite --icon=icon.icns",
+    "release": "npm run build && cd dist && rm -f RefLink-arm64.zip && /usr/bin/ditto -c -k --keepParent RefLink-darwin-arm64/RefLink.app RefLink-arm64.zip && echo \"→ dist/RefLink-arm64.zip\"",
     "test": "node --test tests/*.test.js"
   },
   "dependencies": {

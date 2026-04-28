@@ -1,6 +1,9 @@
 node_modules/
 dist/
 .cursor/
+.claude/
 .DS_Store
 .gstack/
 skill-runs.jsonl
+icon.icns
+AGENTS.md
