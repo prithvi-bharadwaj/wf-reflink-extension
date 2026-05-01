@@ -130,3 +130,5 @@ ClipboardEngine (100ms poll)
 ## Status
 
 Early, working, vibe-coded. Apple Silicon only. Unsigned — distribute via `npm run release` + GitHub releases for now; auto-update and Apple notarization aren't wired.
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
