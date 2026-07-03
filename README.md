@@ -77,6 +77,16 @@ Apple Silicon Macs only.
 
 Copies made *before* the session are ignored. One queue per session.
 
+## Privacy
+
+RefLink needs invasive-sounding permissions (a global key hook and clipboard polling) to do its job, so to be explicit about what it does with them:
+
+- **Everything stays on your Mac.** RefLink makes no network requests — no telemetry, no analytics, no update pings. There is no server component.
+- **Clipboard contents are held in memory only**, for the duration of a capture session, and only while a session is active. Nothing is written to disk except your settings (hotkey, paste mode, delay).
+- **The key listener only matches your configured hotkey.** Keystrokes are not logged or stored.
+
+Don't take my word for it — it's ~5k lines of plain JavaScript; [src/](src/) is a quick read.
+
 ## Hotkeys
 
 Click the tray icon to configure:
