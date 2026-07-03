@@ -2,6 +2,9 @@
   "name": "reflink",
   "version": "0.1.0",
   "description": "Clipboard reference injector for Wispr Flow — auto-links copied items into dictated text",
+  "license": "MIT",
+  "author": "Prithvi Bharadwaj",
+  "repository": "github:prithvi-bharadwaj/reflink",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
