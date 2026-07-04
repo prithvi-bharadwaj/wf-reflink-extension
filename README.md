@@ -10,6 +10,14 @@ Get this:
 
 > "Check out https://github.com/x/y — I love the header on https://stripe.com. Here's a screenshot: 🖼️"
 
+## Why I built this
+
+I dictate almost everything now — Slack messages, PR descriptions, notes to myself. [Wispr Flow](https://wisprflow.ai) is great at turning my voice into text, but the moment I needed to drop a *link* or a *screenshot* into what I was saying, the flow broke. I'd dictate a sentence, stop, reach for the mouse, paste the URL, find my place again, keep going. Every reference was a little context switch, and I do this dozens of times a day.
+
+What I actually wanted was to keep talking and just *say* where the link goes — "check out **inserted link**" — and have the real URL show up there when the transcription lands. So I built it. RefLink watches what I copy while I'm dictating, queues it up, and swaps each trigger phrase for the thing I copied, in order. I keep my hands off the mouse and my train of thought intact.
+
+It's a small thing that removes a paper cut I hit constantly. Sharing it in case you hit the same one.
+
 ## Features
 
 - **Auto-capture** — detects Wispr Flow and starts a session on your hotkey, no extra clicks
